@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Custom Homepage</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="bg-overlay" id="bgOverlay"></div>
+    <main>
+      <div class="topbar">
+        <div class="left">
+          <div class="time-date" id="timeDate">--:-- • --</div>
+        </div>
+
+        <div class="center">
+          <form id="searchForm" class="search-form" onsubmit="return false;">
+            <input
+              id="searchInput"
+              class="search-input"
+              placeholder="Search (press Enter)"
+              autocomplete="off"
+            />
+          </form>
+        </div>
+
+        <div class="right right-controls">
+          <div class="weather" id="weatherBox" title="Weather">
+            <img id="weatherIcon" src="" alt="w" />
+            <div id="weatherText">--° • --</div>
+          </div>
+
+          <div class="controls">
+            <button class="btn" id="themeBtn">Toggle Theme</button>
+            <button class="btn" id="settingsBtn">Settings</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="pinned-section">
+        <section class="pinned-wrap">
+          <div class="pinned-grid" id="pinnedGrid">
+            <!-- Pins injected here -->
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- Settings Modal -->
+    <div class="modal-backdrop" id="modalBackdrop">
+      <div class="modal" role="dialog" aria-modal="true">
+        <h3>Settings</h3>
+        <div class="settings-row">
+          <div class="settings-col">
+            <label>Search engine</label>
+            <select id="searchEngine">
+              <option value="https://www.google.com/search?q=">Google</option>
+              <option value="https://duckduckgo.com/?q=">DuckDuckGo</option>
+              <option value="https://www.bing.com/search?q=">Bing</option>
+            </select>
+          </div>
+          <div class="settings-col theme-col">
+            <label>Theme</label>
+            <select id="themeSelect">
+              <option value="dark">Dark (Murim)</option>
+              <option value="light">Light (System)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="mb-10">
+          <label>WeatherAPI Key (for weather):</label>
+          <input
+            type="text"
+            id="weatherKey"
+            placeholder="Paste your WeatherAPI.com key here"
+          />
+        </div>
+
+        <hr class="settings-divider" />
+
+        <div>
+          <h4 class="pinned-manager-title">Manage pinned sites</h4>
+          <div class="form-row">
+            <input
+              type="text"
+              id="pinTitle"
+              placeholder="Title (e.g. YouTube)"
+            />
+            <input type="url" id="pinURL" placeholder="https://..." />
+            <input
+              type="text"
+              id="pinIcon"
+              placeholder="(optional) icon url"
+              class="small"
+            />
+            <button class="btn" id="addPinBtn">Add</button>
+          </div>
+
+          <div class="pin-list" id="pinList"></div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn" id="closeModal">Close</button>
+          <button class="btn" id="saveSettings">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
