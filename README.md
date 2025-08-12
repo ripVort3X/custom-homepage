@@ -20,5 +20,83 @@ Includes **time/date**, **search bar**, **theme toggle**, **pinned sites**, and 
 
 ## 🚀 Live Demo
 
-**GitHub Pages:**  
-[https://ripVort3X.github.io/custom-homepage/](https://ripVort3X.github.io/custom-homepage/)
+**GitHub Pages URL:**  
+[https://ripvort3x.github.io/custom-homepage/](https://ripvort3x.github.io/custom-homepage/)
+
+---
+
+## ⚙️ How to Use
+
+### **1. Open Settings**
+Click the ⚙️ icon in the top bar.
+
+### **2. Add or Edit Pinned Sites**
+- Enter the **title** of the site.
+- Enter the **URL** (must start with `https://`).
+- Optionally, provide a **favicon URL** (if left empty, the default site icon will be fetched automatically).
+
+### **3. Change Theme**
+- Use the theme toggle to switch between **Dark Mode** and **Light Mode**.
+- Background images automatically match the selected theme.
+
+### **4. Edit Search Engine**
+- Paste a search engine URL with `?q=` for the query.
+- Example:  
+  - Google → `https://www.google.com/search?q=`  
+  - DuckDuckGo → `https://duckduckgo.com/?q=`  
+  - Bing → `https://www.bing.com/search?q=`
+
+### **5. Set Up Weather**
+- Get a free API key from [WeatherAPI.com](https://www.weatherapi.com/).
+- Paste it into the settings.
+- Weather automatically detects your location (with permission) or falls back to a default city.
+
+---
+
+## 🖥 Setting This as Your Browser Homepage
+
+### **Chrome / Edge**
+1. Go to:  
+   - Chrome → `chrome://settings/onStartup`  
+   - Edge → `edge://settings/onStartup`
+2. Select **"Open a specific page or set of pages"**.
+3. Paste: **https://ripvort3x.github.io/custom-homepage/**
+
+💡 *To replace the New Tab page*, use [New Tab Redirect](https://chrome.google.com/webstore/detail/new-tab-redirect/icpgjfneehieebagbmdbhnlpiopdcmna) and set it to the same link.
+
+---
+
+### **Firefox**
+1. Go to **Settings → Home → Homepage and new windows**.
+2. Select **Custom URLs**.
+3. Paste: **https://ripvort3x.github.io/custom-homepage/**
+4. For new tab override, install [Custom New Tab Page](https://addons.mozilla.org/en-US/firefox/addon/custom-new-tab-page/).
+
+---
+
+### **Local File Method**
+1. Download the repository.
+2. Open `index.html` in your browser.
+3. Set it as your homepage using:  
+
+---
+
+## 📂 Folder Structure
+
+CustomHomePage/
+├── backgrounds/
+│ ├── dark/ # Dark theme backgrounds
+│ └── light/ # Light theme backgrounds
+├── index.html
+├── style.css
+├── script.js
+└── README.md
+
+---
+
+## 📜 License
+This project is free for personal use. You can customize it however you like, but please **don’t redistribute it as your own without credit**.
+
+---
+
+**🔥 Your start page, your vibe — fast, minimal, and visually unique.**
