@@ -22,4 +22,4 @@ Includes **time/date**, **search bar**, **theme toggle**, **pinned sites**, and 
 
 **GitHub Pages:**  
 ```text
-https://ripVort3X.github.io/custom-homepage/
+[https://ripVort3X.github.io/custom-homepage/](https://ripVort3X.github.io/custom-homepage/)
