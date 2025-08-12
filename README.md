@@ -81,19 +81,6 @@ Click the ⚙️ icon in the top bar.
 
 ---
 
-## 📂 Folder Structure
-
-CustomHomePage/
-├── backgrounds/
-│ ├── dark/ # Dark theme backgrounds
-│ └── light/ # Light theme backgrounds
-├── index.html
-├── style.css
-├── script.js
-└── README.md
-
----
-
 ## 📜 License
 This project is free for personal use. You can customize it however you like, but please **don’t redistribute it as your own without credit**.
 
