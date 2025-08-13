@@ -1,15 +1,14 @@
-/* script.js — All features integrated
-   - Uses folder: ./backgrounds/dark/ and ./backgrounds/light/
-   - LocalStorage keys used:
-     - homepage:theme
-     - homepage:searchEngine
-     - homepage:weatherKey
-     - homepage:pins
+/* script.js — integrates:
+   - Theme + Background (auto or manual via gallery)
+   - Time, Search, Weather
+   - Pinned Sites (4x4 grid responsive)
+   - Settings modal
+   - Notes widget (draggable, autosave)
 */
 
 const $ = (id) => document.getElementById(id);
 
-// -------------------- CONFIG (your file list) --------------------
+// -------------------- CONFIG --------------------
 const CONFIG = {
   backgroundsPath: "./backgrounds",
   bg: {
@@ -48,57 +47,54 @@ const CONFIG = {
 };
 
 // -------------------- Helpers --------------------
-function save(key, val) {
-  localStorage.setItem(key, JSON.stringify(val));
-}
-function load(key, fallback) {
+const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+const load = (k, d) => {
   try {
-    const v = JSON.parse(localStorage.getItem(key));
-    return v === null || v === undefined ? fallback : v;
-  } catch (e) {
-    return fallback;
+    const v = JSON.parse(localStorage.getItem(k));
+    return v ?? d;
+  } catch {
+    return d;
   }
-}
-function noop() {}
+};
 
 // -------------------- Theme & Background --------------------
-function applyTheme(theme) {
-  document.documentElement.setAttribute("data-theme", theme);
-  save("homepage:theme", theme);
-  setRandomBackground(theme);
-}
-
-function setRandomBackground(theme) {
-  const list = CONFIG.bg[theme] || [];
-  if (!list.length) {
-    document.body.style.backgroundImage = "";
-    $("bgOverlay") &&
-      ($("bgOverlay").style.backgroundColor =
-        theme === "dark" ? "rgba(0,0,0,0.35)" : "rgba(255,255,255,0.18)");
-    return;
-  }
-  const name = list[Math.floor(Math.random() * list.length)];
+function setBackground(theme, name) {
   const url = `${CONFIG.backgroundsPath}/${theme}/${name}`;
   const img = new Image();
   img.onload = () => {
-    // small crossfade: set inline then rely on CSS transition
     document.body.style.backgroundImage = `url('${url}')`;
-    $("bgOverlay") &&
-      ($("bgOverlay").style.backgroundColor =
-        theme === "dark" ? "rgba(0,0,0,0.35)" : "rgba(255,255,255,0.18)");
-  };
-  img.onerror = () => {
-    // silent fallback
-    console.warn("Background load failed:", url);
+    const overlay = $("bgOverlay");
+    if (overlay)
+      overlay.style.backgroundColor =
+        theme === "dark" ? "rgba(0,0,0,0.35)" : "rgba(255,255,255,0.18)";
   };
   img.src = url;
 }
 
-// Toggle theme helper
+function setRandomBackground(theme) {
+  const list = CONFIG.bg[theme] || [];
+  if (!list.length) return;
+  const name = list[Math.floor(Math.random() * list.length)];
+  setBackground(theme, name);
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  save("homepage:theme", theme);
+
+  const mode = load("homepage:bgMode", "auto");
+  const choice = load("homepage:bgChoice", null);
+  if (mode === "manual" && choice && choice.theme === theme) {
+    setBackground(choice.theme, choice.name);
+  } else {
+    setRandomBackground(theme);
+  }
+}
+
+// Toggle theme
 function toggleTheme() {
   const cur = load("homepage:theme", "dark");
-  const next = cur === "dark" ? "light" : "dark";
-  applyTheme(next);
+  applyTheme(cur === "dark" ? "light" : "dark");
 }
 
 // -------------------- Time & Date --------------------
@@ -115,8 +111,7 @@ setInterval(updateTime, 1000);
 // -------------------- Search --------------------
 function doSearch(q) {
   const engine = load("homepage:searchEngine", CONFIG.defaultSearch);
-  const url = engine + encodeURIComponent(q);
-  window.location.href = url;
+  window.location.href = engine + encodeURIComponent(q);
 }
 
 // -------------------- Weather (WeatherAPI.com) --------------------
@@ -132,7 +127,6 @@ async function fetchWeather() {
   }
 
   try {
-    // geolocation attempt
     const pos = await new Promise((res) => {
       if (navigator.geolocation)
         navigator.geolocation.getCurrentPosition(
@@ -142,7 +136,7 @@ async function fetchWeather() {
         );
       else res(null);
     });
-    const q = pos ? `${pos.latitude},${pos.longitude}` : "28.7041,77.1025"; // fallback Delhi
+    const q = pos ? `${pos.latitude},${pos.longitude}` : "28.7041,77.1025";
     const resp = await fetch(
       `https://api.weatherapi.com/v1/current.json?key=${encodeURIComponent(
         key
@@ -158,10 +152,10 @@ async function fetchWeather() {
     wText.textContent = `${temp}° • ${cond}`;
     wIcon.src = iconUrl || "";
     wIcon.alt = cond || "weather";
-  } catch (err) {
-    console.warn(err);
+  } catch (e) {
     wText.textContent = "Weather error";
     wIcon.src = "";
+    console.warn(e);
   }
 }
 
@@ -170,19 +164,18 @@ function fetchFavicon(url) {
   try {
     const u = new URL(url);
     return `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=64`;
-  } catch (e) {
+  } catch {
     return "/favicon.png";
   }
 }
 
 function loadDefaultPinsIfEmpty() {
   if (!localStorage.getItem("homepage:pins")) {
-    const defaults = [
-      { title: "YouTube", url: "https://www.youtube.com", icon: "" },
-      { title: "GitHub", url: "https://github.com", icon: "" },
-      { title: "Reddit", url: "https://reddit.com", icon: "" },
-    ];
-    save("homepage:pins", defaults);
+    save("homepage:pins", [
+      { title: "Youtube", url: "https://youtube.com" },
+      { title: "ChatGPT", url: "https://chatgpt.com/" },
+      { title: "Github", url: "https://github.com" },
+    ]);
   }
 }
 
@@ -191,21 +184,20 @@ function renderPins() {
   const grid = $("pinnedGrid");
   if (!grid) return;
   grid.innerHTML = "";
+
   if (!pins.length) {
-    // empty state: small hint
     const p = document.createElement("div");
     p.className = "no-pins";
     p.textContent = "No pinned sites. Add some in Settings.";
     grid.appendChild(p);
     return;
   }
-  pins.forEach((p, idx) => {
+
+  pins.forEach((p) => {
     const el = document.createElement("div");
     el.className = "pin";
     el.tabIndex = 0;
-    el.addEventListener("click", (e) => {
-      window.open(p.url, "_self");
-    });
+    el.addEventListener("click", () => window.open(p.url, "_self"));
     const img = document.createElement("img");
     img.src = p.icon || fetchFavicon(p.url);
     img.onerror = () => {
@@ -214,12 +206,11 @@ function renderPins() {
     const t = document.createElement("div");
     t.className = "title";
     t.textContent = p.title;
-    el.appendChild(img);
-    el.appendChild(t);
+    el.append(img, t);
     grid.appendChild(el);
   });
 
-  // populate settings list if modal open
+  // settings list
   const list = $("pinList");
   if (list) {
     list.innerHTML = "";
@@ -234,10 +225,10 @@ function renderPins() {
       const actions = document.createElement("div");
       actions.className = "pin-actions";
       const edit = document.createElement("button");
-      edit.className = "btn";
+      edit.className = "btn btn-sm";
       edit.textContent = "Edit";
       const del = document.createElement("button");
-      del.className = "btn";
+      del.className = "btn btn-sm";
       del.textContent = "Delete";
 
       edit.addEventListener("click", (ev) => {
@@ -247,11 +238,7 @@ function renderPins() {
         $("pinIcon").value = p.icon || "";
         $("addPinBtn").textContent = "Update";
         $("addPinBtn").dataset.edit = idx;
-        // scroll modal list into view
-        const m = $("modalBackdrop");
-        if (m) m.scrollTop = m.scrollHeight;
       });
-
       del.addEventListener("click", (ev) => {
         ev.stopPropagation();
         pins.splice(idx, 1);
@@ -259,61 +246,227 @@ function renderPins() {
         renderPins();
       });
 
-      actions.appendChild(edit);
-      actions.appendChild(del);
-      item.appendChild(img);
-      item.appendChild(meta);
-      item.appendChild(actions);
+      actions.append(edit, del);
+      item.append(img, meta, actions);
       list.appendChild(item);
     });
   }
 }
 
 // -------------------- Settings Modal --------------------
+function renderBgThumbs() {
+  const theme = load("homepage:theme", "dark");
+  const mode = load("homepage:bgMode", "auto");
+  const choice = load("homepage:bgChoice", null);
+
+  const thumbs = $("bgThumbs");
+  if (!thumbs) return;
+  thumbs.innerHTML = "";
+
+  if ($("bgMode")) $("bgMode").value = mode;
+
+  CONFIG.bg[theme].forEach((name) => {
+    const wrap = document.createElement("div");
+    wrap.className = "bg-thumb";
+    if (
+      mode === "manual" &&
+      choice &&
+      choice.theme === theme &&
+      choice.name === name
+    ) {
+      wrap.classList.add("active");
+    }
+    const img = document.createElement("img");
+    img.src = `${CONFIG.backgroundsPath}/${theme}/${name}`;
+    img.alt = name;
+
+    wrap.addEventListener("click", () => {
+      document
+        .querySelectorAll(".bg-thumb.active")
+        .forEach((n) => n.classList.remove("active"));
+      wrap.classList.add("active");
+      save("homepage:bgMode", "manual");
+      save("homepage:bgChoice", { theme, name });
+      if ($("bgMode")) $("bgMode").value = "manual";
+      setBackground(theme, name);
+    });
+
+    wrap.appendChild(img);
+    thumbs.appendChild(wrap);
+  });
+}
+
 function openSettings() {
   const modal = $("modalBackdrop");
-  if (!modal) return;
   modal.style.display = "flex";
-  // populate inputs
-  $("searchEngine") &&
-    ($("searchEngine").value = load(
-      "homepage:searchEngine",
-      CONFIG.defaultSearch
-    ));
-  $("themeSelect") && ($("themeSelect").value = load("homepage:theme", "dark"));
-  $("weatherKey") && ($("weatherKey").value = load("homepage:weatherKey", ""));
+
+  $("searchEngine").value = load("homepage:searchEngine", CONFIG.defaultSearch);
+  $("themeSelect").value = load("homepage:theme", "dark");
+  $("weatherKey").value = load("homepage:weatherKey", "");
+
+  renderBgThumbs();
   renderPins();
 }
 
 function closeSettings() {
-  const modal = $("modalBackdrop");
-  if (!modal) return;
-  modal.style.display = "none";
+  $("modalBackdrop").style.display = "none";
 }
 
-// -------------------- Event bindings --------------------
-function bindEvents() {
-  // search form
-  const searchForm = $("searchForm");
-  if (searchForm) {
-    searchForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const q = $("searchInput").value.trim();
-      if (q) doSearch(q);
+function bindSettingsEvents() {
+  $("closeModal").addEventListener("click", closeSettings);
+
+  $("saveSettings").addEventListener("click", () => {
+    save("homepage:searchEngine", $("searchEngine").value);
+    const newTheme = $("themeSelect").value;
+    save("homepage:theme", newTheme);
+    save("homepage:weatherKey", $("weatherKey").value.trim());
+
+    // bg mode dropdown (may be changed)
+    const modeSel = $("bgMode");
+    if (modeSel) save("homepage:bgMode", modeSel.value);
+
+    closeSettings();
+    applyTheme(newTheme);
+    fetchWeather();
+    renderPins();
+  });
+
+  $("bgMode").addEventListener("change", (e) => {
+    const theme = load("homepage:theme", "dark");
+    const mode = e.target.value;
+    save("homepage:bgMode", mode);
+    if (mode === "auto") setRandomBackground(theme);
+  });
+
+  // openers
+  $("settingsBtn").addEventListener("click", openSettings);
+  $("openSettingsSmall").addEventListener("click", openSettings);
+}
+
+// -------------------- Notes widget --------------------
+function renderNotes() {
+  const list = $("notesList");
+  const items = load("homepage:notes", []);
+  list.innerHTML = "";
+  items.forEach((n, idx) => {
+    const li = document.createElement("li");
+    if (n.done) li.classList.add("done");
+
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = n.done;
+    cb.addEventListener("change", () => {
+      items[idx].done = cb.checked;
+      save("homepage:notes", items);
+      renderNotes();
     });
-  }
-  // Enter key on search input also handled but above ensures being safe
-  const searchInput = $("searchInput");
-  if (searchInput) {
-    searchInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        const q = searchInput.value.trim();
-        if (q) doSearch(q);
-      }
+
+    const span = document.createElement("span");
+    span.className = "text";
+    span.textContent = n.text;
+
+    const del = document.createElement("button");
+    del.className = "btn btn-sm del";
+    del.textContent = "Delete";
+    del.addEventListener("click", () => {
+      items.splice(idx, 1);
+      save("homepage:notes", items);
+      renderNotes();
     });
+
+    li.append(cb, span, del);
+    list.appendChild(li);
+  });
+}
+
+function initNotes() {
+  const notes = $("notes");
+  const btn = $("notesBtn");
+  const close = $("notesClose");
+  const clear = $("notesClear");
+  const form = $("notesForm");
+  const input = $("notesInput");
+  const header = $("notesHeader");
+
+  // restore position
+  const pos = load("homepage:notesPos", null);
+  if (pos) {
+    notes.style.left = pos.x + "px";
+    notes.style.top = pos.y + "px";
   }
 
-  // keyboard shortcuts
+  btn.addEventListener("click", () => {
+    notes.classList.toggle("hidden");
+  });
+  close.addEventListener("click", () => notes.classList.add("hidden"));
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const t = input.value.trim();
+    if (!t) return;
+    const items = load("homepage:notes", []);
+    items.unshift({ text: t, done: false });
+    save("homepage:notes", items);
+    input.value = "";
+    renderNotes();
+  });
+
+  clear.addEventListener("click", () => {
+    const items = load("homepage:notes", []).filter((n) => !n.done);
+    save("homepage:notes", items);
+    renderNotes();
+  });
+
+  // drag
+  let dragging = false,
+    offsetX = 0,
+    offsetY = 0;
+  header.addEventListener("mousedown", (e) => {
+    dragging = true;
+    const r = notes.getBoundingClientRect();
+    offsetX = e.clientX - r.left;
+    offsetY = e.clientY - r.top;
+    document.body.style.userSelect = "none";
+  });
+  window.addEventListener("mousemove", (e) => {
+    if (!dragging) return;
+    let x = e.clientX - offsetX;
+    let y = e.clientY - offsetY;
+    const maxX = window.innerWidth - notes.offsetWidth - 8;
+    const maxY = window.innerHeight - notes.offsetHeight - 8;
+    x = Math.max(8, Math.min(maxX, x));
+    y = Math.max(8, Math.min(maxY, y));
+    notes.style.left = x + "px";
+    notes.style.top = y + "px";
+  });
+  window.addEventListener("mouseup", () => {
+    if (!dragging) return;
+    dragging = false;
+    document.body.style.userSelect = "";
+    const r = notes.getBoundingClientRect();
+    save("homepage:notesPos", { x: r.left, y: r.top });
+  });
+
+  renderNotes();
+}
+
+// -------------------- Events --------------------
+function bindGlobalEvents() {
+  // search
+  const sf = $("searchForm");
+  sf.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const q = $("searchInput").value.trim();
+    if (q) doSearch(q);
+  });
+  $("searchInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      const q = e.currentTarget.value.trim();
+      if (q) doSearch(q);
+    }
+  });
+
+  // shortcuts
   window.addEventListener("keydown", (e) => {
     if (
       e.key === "/" &&
@@ -321,108 +474,64 @@ function bindEvents() {
       document.activeElement.tagName !== "TEXTAREA"
     ) {
       e.preventDefault();
-      const si = $("searchInput");
-      si && si.focus();
+      $("searchInput").focus();
     }
-    if (e.key === "Escape") closeSettings();
+    if (e.key === "Escape") {
+      $("modalBackdrop").style.display = "none";
+    }
   });
 
-  // modal click outside to close
-  const modal = $("modalBackdrop");
-  if (modal) {
-    modal.addEventListener("click", (ev) => {
-      if (ev.target === modal) closeSettings();
-    });
-  }
+  // click outside modal
+  $("modalBackdrop").addEventListener("click", (ev) => {
+    if (ev.target === $("modalBackdrop"))
+      $("modalBackdrop").style.display = "none";
+  });
 
-  // settings open/close triggers (handles presence/absence)
-  const settingsBtn = $("settingsBtn");
-  if (settingsBtn) settingsBtn.addEventListener("click", openSettings);
-  const openSettingsSmall = $("openSettingsSmall");
-  if (openSettingsSmall)
-    openSettingsSmall.addEventListener("click", openSettings);
-  const closeBtn = $("closeModal");
-  if (closeBtn) closeBtn.addEventListener("click", closeSettings);
+  // theme toggle
+  $("themeBtn").addEventListener("click", toggleTheme);
 
-  // save settings
-  const saveBtn = $("saveSettings");
-  if (saveBtn) {
-    saveBtn.addEventListener("click", () => {
-      const se = $("searchEngine")
-        ? $("searchEngine").value
-        : CONFIG.defaultSearch;
-      save("homepage:searchEngine", se);
-      const theme = $("themeSelect")
-        ? $("themeSelect").value
-        : load("homepage:theme", "dark");
-      save("homepage:theme", theme);
-      const wk = $("weatherKey") ? $("weatherKey").value.trim() : "";
-      save("homepage:weatherKey", wk);
-      closeSettings();
-      applyTheme(theme);
-      fetchWeather();
-    });
-  }
+  // Add/Update pin
+  $("addPinBtn").addEventListener("click", (e) => {
+    e.preventDefault();
+    const title = $("pinTitle").value.trim();
+    const url = $("pinURL").value.trim();
+    const icon = $("pinIcon").value.trim();
+    if (!title || !url) return alert("Title and URL required");
 
-  // theme toggle button (topbar)
-  const themeBtn = $("themeBtn");
-  if (themeBtn)
-    themeBtn.addEventListener("click", () => {
-      toggleTheme();
-    });
-
-  // add/update pin button
-  const addPinBtn = $("addPinBtn");
-  if (addPinBtn) {
-    addPinBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      const title = ($("pinTitle") && $("pinTitle").value.trim()) || "";
-      const url = ($("pinURL") && $("pinURL").value.trim()) || "";
-      const icon = ($("pinIcon") && $("pinIcon").value.trim()) || "";
-      if (!title || !url) {
-        alert("Title and URL required");
-        return;
-      }
-      const pins = load("homepage:pins", []);
-      if (addPinBtn.dataset.edit != null) {
-        const idx = Number(addPinBtn.dataset.edit);
-        pins[idx] = { title, url, icon };
-        delete addPinBtn.dataset.edit;
-        addPinBtn.textContent = "Add";
-      } else {
-        pins.push({ title, url, icon });
-      }
-      save("homepage:pins", pins);
-      if ($("pinTitle")) $("pinTitle").value = "";
-      if ($("pinURL")) $("pinURL").value = "";
-      if ($("pinIcon")) $("pinIcon").value = "";
-      renderPins();
-    });
-  }
+    const pins = load("homepage:pins", []);
+    const editing = $("addPinBtn").dataset.edit;
+    if (editing != null) {
+      pins[Number(editing)] = { title, url, icon };
+      delete $("addPinBtn").dataset.edit;
+      $("addPinBtn").textContent = "Add";
+    } else {
+      pins.push({ title, url, icon });
+    }
+    save("homepage:pins", pins);
+    $("pinTitle").value = $("pinURL").value = $("pinIcon").value = "";
+    renderPins();
+  });
 }
 
 // -------------------- Init --------------------
 (function init() {
-  // apply saved theme or default
+  // theme & bg
   const theme = load("homepage:theme", "dark");
   document.documentElement.setAttribute("data-theme", theme);
+  if (!localStorage.getItem("homepage:bgMode")) save("homepage:bgMode", "auto");
 
-  // ensure pins exist
+  // defaults & UI
   loadDefaultPinsIfEmpty();
-
-  // initial rendering
-  updateTime(); // immediate
+  updateTime();
   setInterval(updateTime, 1000);
-  applyTheme(theme); // sets background as well
+  applyTheme(theme);
   renderPins();
   fetchWeather();
 
-  // bind UI events
-  bindEvents();
+  bindGlobalEvents();
+  bindSettingsEvents();
+  initNotes();
 
-  // focus search on load if present
-  window.addEventListener("load", () => {
-    const si = $("searchInput");
-    si && si.focus();
-  });
+  // focus search on load
+  window.addEventListener("load", () => $("searchInput")?.focus());
 })();

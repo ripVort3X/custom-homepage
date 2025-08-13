@@ -1,110 +1,138 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Custom Homepage</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <div class="bg-overlay" id="bgOverlay"></div>
+    <!-- Background overlay -->
+    <div id="bgOverlay" class="bg-overlay"></div>
+
     <main>
-      <div class="topbar">
+      <!-- Top bar -->
+      <header class="topbar fade-in" id="topbar">
         <div class="left">
-          <div class="time-date" id="timeDate">--:-- • --</div>
+          <div class="time-date" id="timeDate">--:-- • --/--/----</div>
         </div>
 
         <div class="center">
-          <form id="searchForm" class="search-form" onsubmit="return false;">
+          <form id="searchForm" class="search-form">
             <input
               id="searchInput"
               class="search-input"
+              type="text"
               placeholder="Search (press Enter)"
-              autocomplete="off"
             />
           </form>
         </div>
 
-        <div class="right right-controls">
-          <div class="weather" id="weatherBox" title="Weather">
-            <img id="weatherIcon" src="" alt="w" />
-            <div id="weatherText">--° • --</div>
+        <div class="right">
+          <div class="weather">
+            <img id="weatherIcon" alt="" />
+            <span id="weatherText">--° • …</span>
           </div>
-
-          <div class="controls">
-            <button class="btn" id="themeBtn">Toggle Theme</button>
-            <button class="btn" id="settingsBtn">Settings</button>
-          </div>
+          <button id="themeBtn" class="btn">Toggle Theme</button>
+          <button id="notesBtn" class="btn">Notes</button>
+          <button id="settingsBtn" class="btn">Settings</button>
         </div>
-      </div>
+      </header>
 
+      <!-- Pinned sites -->
       <div class="pinned-section">
-        <section class="pinned-wrap">
-          <div class="pinned-grid" id="pinnedGrid">
-            <!-- Pins injected here -->
-          </div>
+        <section class="pinned-wrap rise-in" id="pinnedWrap">
+          <div class="pinned-grid" id="pinnedGrid"></div>
         </section>
       </div>
     </main>
 
-    <!-- Settings Modal -->
-    <div class="modal-backdrop" id="modalBackdrop">
+    <footer>
+      <span id="openSettingsSmall" class="settings-small">Settings</span>
+    </footer>
+
+    <!-- Settings modal -->
+    <div id="modalBackdrop" class="modal-backdrop" aria-hidden="true">
       <div class="modal" role="dialog" aria-modal="true">
         <h3>Settings</h3>
-        <div class="settings-row">
-          <div class="settings-col">
-            <label>Search engine</label>
-            <select id="searchEngine">
-              <option value="https://www.google.com/search?q=">Google</option>
-              <option value="https://duckduckgo.com/?q=">DuckDuckGo</option>
-              <option value="https://www.bing.com/search?q=">Bing</option>
-            </select>
-          </div>
-          <div class="settings-col theme-col">
-            <label>Theme</label>
-            <select id="themeSelect">
-              <option value="dark">Dark (Murim)</option>
-              <option value="light">Light (System)</option>
-            </select>
-          </div>
+
+        <div class="form-row">
+          <label class="small">Search engine</label>
+          <select id="searchEngine">
+            <option value="https://www.google.com/search?q=">Google</option>
+            <option value="https://duckduckgo.com/?q=">DuckDuckGo</option>
+            <option value="https://www.bing.com/search?q=">Bing</option>
+          </select>
         </div>
 
-        <div class="mb-10">
-          <label>WeatherAPI Key (for weather):</label>
+        <div class="form-row">
+          <label class="small">Theme</label>
+          <select id="themeSelect">
+            <option value="dark">Dark</option>
+            <option value="light">Light</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label class="small">WeatherAPI Key</label>
+          <input id="weatherKey" type="text" placeholder="abe805377c4..." />
+        </div>
+
+        <!-- Background gallery -->
+        <h4 style="margin: 14px 0 6px">Background</h4>
+        <div class="form-row">
+          <label class="small">Mode</label>
+          <select id="bgMode">
+            <option value="auto">Auto (random on load)</option>
+            <option value="manual">Manual (choose image)</option>
+          </select>
+        </div>
+        <div id="bgThumbs" class="bg-thumbs" aria-label="Background choices">
+          <!-- thumbs rendered by JS based on current theme -->
+        </div>
+
+        <h4 style="margin: 18px 0 8px">Manage pinned sites</h4>
+        <div class="form-row">
+          <input id="pinTitle" type="text" placeholder="Title (e.g. YouTube)" />
+          <input id="pinURL" type="url" placeholder="https://..." />
+          <input id="pinIcon" type="url" placeholder="(optional) icon url" />
+          <button id="addPinBtn" class="btn">Add</button>
+        </div>
+
+        <div id="pinList" class="pin-list"></div>
+
+        <div
+          style="
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            margin-top: 14px;
+          "
+        >
+          <button id="closeModal" class="btn">Close</button>
+          <button id="saveSettings" class="btn">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notes widget (draggable) -->
+    <div id="notes" class="notes hidden">
+      <div id="notesHeader" class="notes-header">
+        <span>Notes</span>
+        <div class="notes-actions">
+          <button id="notesClear" class="btn btn-sm">Clear done</button>
+          <button id="notesClose" class="btn btn-sm">×</button>
+        </div>
+      </div>
+      <div class="notes-body">
+        <form id="notesForm" class="notes-form">
           <input
+            id="notesInput"
             type="text"
-            id="weatherKey"
-            placeholder="Paste your WeatherAPI.com key here"
+            placeholder="Add a note and press Enter"
           />
-        </div>
-
-        <hr class="settings-divider" />
-
-        <div>
-          <h4 class="pinned-manager-title">Manage pinned sites</h4>
-          <div class="form-row">
-            <input
-              type="text"
-              id="pinTitle"
-              placeholder="Title (e.g. YouTube)"
-            />
-            <input type="url" id="pinURL" placeholder="https://..." />
-            <input
-              type="text"
-              id="pinIcon"
-              placeholder="(optional) icon url"
-              class="small"
-            />
-            <button class="btn" id="addPinBtn">Add</button>
-          </div>
-
-          <div class="pin-list" id="pinList"></div>
-        </div>
-
-        <div class="modal-actions">
-          <button class="btn" id="closeModal">Close</button>
-          <button class="btn" id="saveSettings">Save</button>
-        </div>
+        </form>
+        <ul id="notesList" class="notes-list"></ul>
       </div>
     </div>
 
