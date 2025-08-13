@@ -271,7 +271,7 @@ select {
 
 /* Pin list in modal */
 .pin-list {
-  max-height: 300px;
+  max-height: 230px;
   overflow: auto;
   margin-top: 12px;
   display: flex;
